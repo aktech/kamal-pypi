@@ -45,6 +45,7 @@ jobs:
             --name kamal \
             --version ${{ inputs.kamal_version }} \
             --source kamal-src \
+            --source-entry-point kamal \
             --platform ${{ matrix.platform }} \
             --description "Deploy web apps anywhere" \
             --author "Basecamp" \
