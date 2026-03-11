@@ -1,6 +1,9 @@
 name: Build and Release Kamal
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       kamal_version:
@@ -23,6 +26,14 @@ jobs:
     container: ghcr.io/tamatebako/tebako-ubuntu-20.04:latest
 
     steps:
+      - name: Set version
+        run: |
+          if [ -n "${{ inputs.kamal_version }}" ]; then
+            echo "VERSION=${{ inputs.kamal_version }}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          fi
+
       - name: Checkout kamal-pypi
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -30,7 +41,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: basecamp/kamal
-          ref: v${{ inputs.kamal_version }}
+          ref: v${{ env.VERSION }}
           path: kamal-src
 
       - name: Setup uv
@@ -52,7 +63,7 @@ jobs:
         run: |
           ruby-to-wheel \
             --name kamal \
-            --version ${{ inputs.kamal_version }} \
+            --version ${{ env.VERSION }} \
             --source kamal-src \
             --source-entry-point kamal \
             --platform ${{ matrix.platform }} \
@@ -79,6 +90,14 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     steps:
+      - name: Set version
+        run: |
+          if [ -n "${{ inputs.kamal_version }}" ]; then
+            echo "VERSION=${{ inputs.kamal_version }}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          fi
+
       - name: Checkout kamal-pypi
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -86,7 +105,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: basecamp/kamal
-          ref: v${{ inputs.kamal_version }}
+          ref: v${{ env.VERSION }}
           path: kamal-src
 
       - name: Install tebako dependencies
@@ -114,7 +133,7 @@ jobs:
         run: |
           ruby-to-wheel \
             --name kamal \
-            --version ${{ inputs.kamal_version }} \
+            --version ${{ env.VERSION }} \
             --source kamal-src \
             --source-entry-point kamal \
             --platform ${{ matrix.platform }} \
@@ -135,6 +154,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
+      contents: write
 
     steps:
       - name: Download all wheels
@@ -151,3 +171,9 @@ jobs:
         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
         with:
           verbose: true
+
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+        with:
+          files: dist/*.whl
