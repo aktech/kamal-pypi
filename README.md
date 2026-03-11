@@ -1,6 +1,11 @@
 # kamal-pypi
 
+[![PyPI](https://img.shields.io/pypi/v/kamal)](https://pypi.org/project/kamal/)
+[![Build](https://github.com/aktech/kamal-pypi/actions/workflows/release.yml/badge.svg)](https://github.com/aktech/kamal-pypi/actions/workflows/release.yml)
+
 [Kamal](https://github.com/basecamp/kamal) packaged for PyPI — install it with `pip` instead of managing a Ruby toolchain.
+
+> **Note:** This is an unofficial package. Kamal is developed by [Basecamp](https://basecamp.com). See the [official repository](https://github.com/basecamp/kamal) and [documentation](https://kamal-deploy.org) for more information.
 
 ## Why?
 
