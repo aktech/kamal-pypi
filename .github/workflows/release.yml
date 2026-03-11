@@ -59,6 +59,12 @@ jobs:
           echo "Patched Gemfile.lock:"
           tail -5 Gemfile.lock
 
+      - name: Find libyaml
+        run: |
+          LIBYAML=$(find / -name 'libyaml*.so*' -not -name '*.a' 2>/dev/null | head -1)
+          echo "Found libyaml: $LIBYAML"
+          echo "LIBYAML_PATH=$LIBYAML" >> "$GITHUB_ENV"
+
       - name: Build wheel
         run: |
           ruby-to-wheel \
@@ -67,6 +73,7 @@ jobs:
             --source kamal-src \
             --source-entry-point kamal \
             --platform ${{ matrix.platform }} \
+            --extra-lib "${{ env.LIBYAML_PATH }}" \
             --description "Deploy web apps anywhere" \
             --author "Basecamp" \
             --url "https://github.com/basecamp/kamal" \
@@ -129,6 +136,12 @@ jobs:
           echo "Patched Gemfile.lock:"
           tail -5 Gemfile.lock
 
+      - name: Find libyaml
+        run: |
+          LIBYAML=$(find /opt/homebrew /usr/local -name 'libyaml*.dylib' 2>/dev/null | head -1)
+          echo "Found libyaml: $LIBYAML"
+          echo "LIBYAML_PATH=$LIBYAML" >> "$GITHUB_ENV"
+
       - name: Build wheel
         run: |
           ruby-to-wheel \
@@ -137,6 +150,7 @@ jobs:
             --source kamal-src \
             --source-entry-point kamal \
             --platform ${{ matrix.platform }} \
+            --extra-lib "${{ env.LIBYAML_PATH }}" \
             --description "Deploy web apps anywhere" \
             --author "Basecamp" \
             --url "https://github.com/basecamp/kamal" \
@@ -167,10 +181,12 @@ jobs:
       - name: List wheels
         run: ls -la dist/
 
-      - name: Publish to PyPI
+      - name: Publish to Test PyPI
         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
         with:
+          repository-url: https://test.pypi.org/legacy/
           verbose: true
+          skip-existing: true
 
       - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
