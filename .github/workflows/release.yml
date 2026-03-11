@@ -1,0 +1,133 @@
+name: Build and Release Kamal
+
+on:
+  workflow_dispatch:
+    inputs:
+      kamal_version:
+        description: "Kamal version to package (e.g. 2.10.1)"
+        required: true
+        type: string
+
+jobs:
+  build-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux-amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux-arm64
+
+    runs-on: ${{ matrix.runner }}
+    container: ghcr.io/tamatebako/tebako-ubuntu-20.04:latest
+
+    steps:
+      - name: Checkout kamal-pypi
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Checkout Kamal source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: basecamp/kamal
+          ref: v${{ inputs.kamal_version }}
+          path: kamal-src
+
+      - name: Install ruby-to-wheel
+        run: pip3 install "ruby-to-wheel @ git+https://github.com/aktech/ruby-to-wheel.git"
+
+      - name: Build wheel
+        run: |
+          ruby-to-wheel \
+            --name kamal \
+            --version ${{ inputs.kamal_version }} \
+            --source kamal-src \
+            --platform ${{ matrix.platform }} \
+            --description "Deploy web apps anywhere" \
+            --author "Basecamp" \
+            --url "https://github.com/basecamp/kamal" \
+            --license "MIT" \
+            --readme kamal-src/README.md
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wheel-${{ matrix.platform }}
+          path: dist/*.whl
+
+  build-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            platform: darwin-amd64
+          - runner: macos-14
+            platform: darwin-arm64
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout kamal-pypi
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Checkout Kamal source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: basecamp/kamal
+          ref: v${{ inputs.kamal_version }}
+          path: kamal-src
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Tebako dependencies
+        run: |
+          brew install bison flex binutils libffi double-conversion boost jemalloc fmt glog gnu-sed bash zlib ncurses pkg-config
+          gem install tebako
+
+      - name: Install ruby-to-wheel
+        run: pip install "ruby-to-wheel @ git+https://github.com/aktech/ruby-to-wheel.git"
+
+      - name: Build wheel
+        run: |
+          ruby-to-wheel \
+            --name kamal \
+            --version ${{ inputs.kamal_version }} \
+            --source kamal-src \
+            --platform ${{ matrix.platform }} \
+            --description "Deploy web apps anywhere" \
+            --author "Basecamp" \
+            --url "https://github.com/basecamp/kamal" \
+            --license "MIT" \
+            --readme kamal-src/README.md
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wheel-${{ matrix.platform }}
+          path: dist/*.whl
+
+  publish:
+    needs: [build-linux, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download all wheels
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: wheel-*
+          path: dist
+          merge-multiple: true
+
+      - name: List wheels
+        run: ls -la dist/
+
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+        with:
+          repository-url: https://test.pypi.org/legacy/
