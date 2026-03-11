@@ -9,7 +9,7 @@ on:
         type: string
 
 jobs:
-  build:
+  build-linux:
     strategy:
       fail-fast: false
       matrix:
@@ -68,8 +68,72 @@ jobs:
           name: wheel-${{ matrix.platform }}
           path: dist/*.whl
 
+  build-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            platform: darwin-arm64
+          - runner: macos-13
+            platform: darwin-amd64
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout kamal-pypi
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Checkout Kamal source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: basecamp/kamal
+          ref: v${{ inputs.kamal_version }}
+          path: kamal-src
+
+      - name: Install tebako dependencies
+        run: brew install bison flex binutils libffi double-conversion boost jemalloc fmt glog gnu-sed bash zlib ncurses pkg-config
+
+      - name: Install tebako
+        run: gem install tebako
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@6ee6290f1cbc4156c0bdd66691b2c144ef8df19a # v7.4.0
+
+      - name: Install ruby-to-wheel
+        run: uv tool install "ruby-to-wheel @ git+https://github.com/aktech/ruby-to-wheel.git"
+
+      - name: Prepare Gemfile.lock for tebako
+        run: |
+          cd kamal-src
+          bundle lock --add-platform $(ruby -e "puts RUBY_PLATFORM")
+          # Tebako requires bundler >= 2.4.22; directly patch BUNDLED WITH version
+          sed -i '' '/BUNDLED WITH/{n;s/.*/   2.5.23/;}' Gemfile.lock
+          echo "Patched Gemfile.lock:"
+          tail -5 Gemfile.lock
+
+      - name: Build wheel
+        run: |
+          ruby-to-wheel \
+            --name kamal \
+            --version ${{ inputs.kamal_version }} \
+            --source kamal-src \
+            --source-entry-point kamal \
+            --platform ${{ matrix.platform }} \
+            --description "Deploy web apps anywhere" \
+            --author "Basecamp" \
+            --url "https://github.com/basecamp/kamal" \
+            --license "MIT" \
+            --readme kamal-src/README.md
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wheel-${{ matrix.platform }}
+          path: dist/*.whl
+
   publish:
-    needs: build
+    needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
