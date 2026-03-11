@@ -33,8 +33,11 @@ jobs:
           ref: v${{ inputs.kamal_version }}
           path: kamal-src
 
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
       - name: Install ruby-to-wheel
-        run: pip3 install "ruby-to-wheel @ git+https://github.com/aktech/ruby-to-wheel.git"
+        run: uv tool install "ruby-to-wheel @ git+https://github.com/aktech/ruby-to-wheel.git"
 
       - name: Build wheel
         run: |
