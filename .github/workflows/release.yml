@@ -39,6 +39,11 @@ jobs:
       - name: Install ruby-to-wheel
         run: uv tool install "ruby-to-wheel @ git+https://github.com/aktech/ruby-to-wheel.git"
 
+      - name: Add current platform to Gemfile.lock
+        run: |
+          cd kamal-src
+          bundle lock --add-platform $(ruby -e "puts RUBY_PLATFORM")
+
       - name: Build wheel
         run: |
           ruby-to-wheel \
