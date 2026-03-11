@@ -75,8 +75,6 @@ jobs:
         include:
           - runner: macos-14
             platform: darwin-arm64
-          - runner: macos-13
-            platform: darwin-amd64
 
     runs-on: ${{ matrix.runner }}
 
