@@ -43,11 +43,9 @@ jobs:
         run: |
           cd kamal-src
           bundle lock --add-platform $(ruby -e "puts RUBY_PLATFORM")
-          # Tebako requires bundler >= 2.4.22; Kamal's lockfile may pin an older version
-          gem install bundler
-          BUNDLER_VERSION=$(bundler --version | awk '{print $NF}')
-          echo "Installed bundler version: $BUNDLER_VERSION"
-          sed -i "s/^   [0-9]\+\.[0-9]\+\.[0-9]\+$/   $BUNDLER_VERSION/" Gemfile.lock
+          # Tebako requires bundler >= 2.4.22; directly patch BUNDLED WITH version
+          sed -i '/BUNDLED WITH/{n;s/.*/   2.5.23/}' Gemfile.lock
+          echo "Patched Gemfile.lock:"
           tail -5 Gemfile.lock
 
       - name: Build wheel
