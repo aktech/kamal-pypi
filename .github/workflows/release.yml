@@ -29,10 +29,13 @@ jobs:
       - name: Set version
         run: |
           if [ -n "${{ inputs.kamal_version }}" ]; then
-            echo "VERSION=${{ inputs.kamal_version }}" >> "$GITHUB_ENV"
+            VERSION="${{ inputs.kamal_version }}"
           else
-            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+            VERSION="${GITHUB_REF_NAME#v}"
           fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          # Strip .postN suffix for upstream Kamal git tag
+          echo "KAMAL_REF=v${VERSION%.post*}" >> "$GITHUB_ENV"
 
       - name: Checkout kamal-pypi
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -41,7 +44,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: basecamp/kamal
-          ref: v${{ env.VERSION }}
+          ref: ${{ env.KAMAL_REF }}
           path: kamal-src
 
       - name: Setup uv
@@ -100,10 +103,13 @@ jobs:
       - name: Set version
         run: |
           if [ -n "${{ inputs.kamal_version }}" ]; then
-            echo "VERSION=${{ inputs.kamal_version }}" >> "$GITHUB_ENV"
+            VERSION="${{ inputs.kamal_version }}"
           else
-            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+            VERSION="${GITHUB_REF_NAME#v}"
           fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          # Strip .postN suffix for upstream Kamal git tag
+          echo "KAMAL_REF=v${VERSION%.post*}" >> "$GITHUB_ENV"
 
       - name: Checkout kamal-pypi
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -112,7 +118,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: basecamp/kamal
-          ref: v${{ env.VERSION }}
+          ref: ${{ env.KAMAL_REF }}
           path: kamal-src
 
       - name: Install tebako dependencies
